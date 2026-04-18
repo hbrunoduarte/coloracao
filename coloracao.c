@@ -1,0 +1,165 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define N_VERTICES 5
+#define N_CORES 3
+
+typedef struct Vertice {
+    int indice;
+    struct Vertice* proximo;
+} Vertice;
+
+typedef struct Adjacencias {
+    int cor;
+    Vertice* head;
+} Adjacencias;
+
+typedef struct Grafo {
+    int numVertices;
+    Adjacencias* listaAdj;
+} Grafo;
+
+void resetaCores(Grafo* grafo) {
+    for(int i = 0; i < grafo->numVertices; i++) {
+        grafo->listaAdj[i].cor = 0;
+    }
+}
+
+int ehSeguro(Grafo* grafo, int v, int corTestada) {
+    Vertice* vizinho = grafo->listaAdj[v].head;
+
+    while(vizinho != NULL) {
+        if(grafo->listaAdj[vizinho->indice].cor == corTestada)
+            return 0;
+
+        vizinho = vizinho->proximo;
+    }
+    return 1;
+}
+
+int coloreBacktracking(Grafo* grafo, int qtdCores, int verticeAtual) {
+    if(verticeAtual == grafo->numVertices) {
+        printf("------------------------------------------------------\n");
+        printf("Backtracking: Grafo colorido com %d cores com sucesso!\n", qtdCores);
+        printf("------------------------------------------------------\n");
+        return 1;
+    }
+
+
+    for(int c = 1; c <= qtdCores; c++) {
+
+        if(ehSeguro(grafo, verticeAtual, c)) {
+            grafo->listaAdj[verticeAtual].cor = c;
+
+            if(coloreBacktracking(grafo, qtdCores, verticeAtual+1) == 1) {
+                return 1;
+            }
+
+            grafo->listaAdj[verticeAtual].cor = 0;
+        }
+    }
+    printf("------------------------------------------------------\n");
+    printf("Backtracking: Não foi possível colorir o grafo com %d cores.\n", qtdCores);
+    printf("------------------------------------------------------\n");
+    return 0;
+}
+
+void printaGrafo(Grafo* grafo, int printaCor) {
+    printf("Lista de Adjacências: \n");
+
+    for(int i = 0; i < grafo->numVertices; i++) {
+
+        if(printaCor) {
+            printf("[ (COR %d) %d:", grafo->listaAdj[i].cor, i);
+        } else {
+            printf("[ %d:", i);    
+        }
+        
+        Vertice* aux = grafo->listaAdj[i].head;
+
+        while(aux != NULL) {
+            printf(" -> %d", aux->indice);
+            aux = aux->proximo;
+        }
+
+        printf(" ]\n");
+    }
+}
+
+// fisher-yates (auxiliar de criaArestasRandom)
+// não há auto-relacionamento nem vértices sem adjacencias
+Vertice* escolheVizinhos(Grafo* grafo, int i, int qtdAleat) {
+    if (qtdAleat == 0) return NULL; 
+
+    int* baralho = malloc((grafo->numVertices - 1) * sizeof(int));
+    int pos = 0;
+
+    for(int k = 0; k < grafo->numVertices; k++) {
+        if(k != i) {
+            baralho[pos] = k;
+            pos++;
+        }
+    }
+
+    for (int k = pos - 1; k > 0; k--) {
+        int r = rand() % (k + 1); 
+        int temp = baralho[k];
+        baralho[k] = baralho[r];
+        baralho[r] = temp;
+    }
+
+    Vertice* headListaNova = NULL;
+
+    for(int k = 0; k < qtdAleat; k++) { 
+        int vizinhoEscolhido = baralho[k];
+
+        Vertice* novoVertice = malloc(sizeof(Vertice));
+        novoVertice->indice = vizinhoEscolhido;
+        novoVertice->proximo = headListaNova;
+        headListaNova = novoVertice; 
+    }
+
+    free(baralho);
+    return headListaNova; 
+}
+
+void criaArestasRandom(Grafo* grafo) {
+    int qtdAleat;
+
+    for(int i = 0; i < grafo->numVertices; i++) {
+        qtdAleat = (rand() % (grafo->numVertices - 1)) + 1;
+        grafo->listaAdj[i].head = escolheVizinhos(grafo, i, qtdAleat);
+    }
+}
+
+Grafo* criaGrafo(int n) {
+    Grafo* grafo = malloc(sizeof(Grafo));
+    grafo->numVertices = n;
+
+    grafo->listaAdj = malloc(sizeof(Adjacencias)*n);
+
+    for(int i = 0; i < n; i++) {
+        grafo->listaAdj[i].head = NULL;
+        grafo->listaAdj[i].cor = 0;
+    }
+        
+    return grafo;
+}
+
+int main() {
+    Grafo* grafo = criaGrafo(N_VERTICES);
+    srand(time(NULL));
+    criaArestasRandom(grafo);
+    printaGrafo(grafo, 0);
+
+    coloreBacktracking(grafo, N_CORES, 0);
+    printaGrafo(grafo, 1);
+
+    resetaCores(grafo);
+
+    // coloreGuloso()
+    // printaGrafo(grafo, 1);
+
+    return 0;
+}
