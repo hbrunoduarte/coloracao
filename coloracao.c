@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <time.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #define N_VERTICES 5
 #define N_CORES 3
 
@@ -17,13 +21,30 @@ typedef struct Adjacencias {
 
 typedef struct Grafo {
     int numVertices;
+    int verticesColoridos;
     Adjacencias* listaAdj;
 } Grafo;
+
+void printaGrafo(Grafo* grafo, int printaCor);
 
 void resetaCores(Grafo* grafo) {
     for(int i = 0; i < grafo->numVertices; i++) {
         grafo->listaAdj[i].cor = 0;
     }
+}
+
+int temVerticeSemCor(Grafo *g) {
+    return g->verticesColoridos != g->numVertices;
+}
+
+int todosVizinhosColoridos(Grafo *g, Vertice *v) {
+    Vertice *aux = v;
+    while (aux != NULL) {
+        if (g->listaAdj[v->indice].cor == 0)
+            return 0;
+        aux = aux->proximo;
+    }
+    return 1;
 }
 
 int ehSeguro(Grafo* grafo, int v, int corTestada) {
@@ -59,10 +80,48 @@ int coloreBacktracking(Grafo* grafo, int qtdCores, int verticeAtual) {
             grafo->listaAdj[verticeAtual].cor = 0;
         }
     }
+
     printf("------------------------------------------------------\n");
     printf("Backtracking: Não foi possível colorir o grafo com %d cores.\n", qtdCores);
     printf("------------------------------------------------------\n");
     return 0;
+}
+
+void coloreGulosoAuxiliar(Grafo *grafo, int verticeAtual, int *numCores) {
+
+    int qtdCoresInseguras = 0;
+    while (qtdCoresInseguras != *numCores && !ehSeguro(grafo, verticeAtual, *numCores-qtdCoresInseguras))
+        qtdCoresInseguras++;
+    
+    //printf("verticeAtual = %i, numCores = %i, qtdCoresInseguras = %i\n", verticeAtual, *numCores, qtdCoresInseguras);
+
+    if (qtdCoresInseguras == *numCores) {
+        (*numCores)++;
+        grafo->listaAdj[verticeAtual].cor = *numCores;
+    } else {
+        grafo->listaAdj[verticeAtual].cor = *numCores-qtdCoresInseguras;
+    }
+
+    grafo->verticesColoridos++;
+
+    Vertice *proxVertice = grafo->listaAdj[verticeAtual].head;
+    while (temVerticeSemCor(grafo) && proxVertice != NULL) {
+        if (grafo->listaAdj[proxVertice->indice].cor == 0)
+            coloreGulosoAuxiliar(grafo, proxVertice->indice, numCores);
+        proxVertice = proxVertice->proximo;
+    }
+}
+
+int coloreGuloso(Grafo *grafo) {
+
+    int numCores = 1;
+
+    for (int i = 0; i < grafo->numVertices && temVerticeSemCor(grafo); i++)
+        if (grafo->listaAdj[i].cor == 0)
+            coloreGulosoAuxiliar(grafo, i, &numCores);
+    
+    grafo->verticesColoridos = 0;
+    return numCores;
 }
 
 void printaGrafo(Grafo* grafo, int printaCor) {
@@ -117,7 +176,7 @@ Vertice* escolheVizinhos(Grafo* grafo, int i, int qtdAleat) {
         Vertice* novoVertice = malloc(sizeof(Vertice));
         novoVertice->indice = vizinhoEscolhido;
         novoVertice->proximo = headListaNova;
-        headListaNova = novoVertice; 
+        headListaNova = novoVertice;
     }
 
     free(baralho);
@@ -131,12 +190,36 @@ void criaArestasRandom(Grafo* grafo) {
         qtdAleat = (rand() % (grafo->numVertices - 1)) + 1;
         grafo->listaAdj[i].head = escolheVizinhos(grafo, i, qtdAleat);
     }
+
+    // garantir a simetria do grafo
+    for (int i = 0; i < grafo->numVertices; i++) {
+
+        Vertice *vAdj_i = grafo->listaAdj[i].head;
+        while (vAdj_i != NULL) {
+
+            Vertice *vAdj_j = grafo->listaAdj[vAdj_i->indice].head;
+            while (vAdj_j != NULL) {
+                if (vAdj_j->indice == i)
+                    break;
+                vAdj_j = vAdj_j->proximo;
+            }
+
+            if (vAdj_j == NULL) {
+                Vertice *novoVertice = malloc(sizeof(Vertice));
+                novoVertice->indice = i;
+                novoVertice->proximo = grafo->listaAdj[vAdj_i->indice].head;
+                grafo->listaAdj[vAdj_i->indice].head = novoVertice;
+            }
+    
+            vAdj_i = vAdj_i->proximo;
+        }
+    }
 }
 
 Grafo* criaGrafo(int n) {
     Grafo* grafo = malloc(sizeof(Grafo));
     grafo->numVertices = n;
-
+    grafo->verticesColoridos = 0;
     grafo->listaAdj = malloc(sizeof(Adjacencias)*n);
 
     for(int i = 0; i < n; i++) {
@@ -147,19 +230,44 @@ Grafo* criaGrafo(int n) {
     return grafo;
 }
 
+int estaBemColorido(Grafo *g) {
+    for (int i = 0; i < g->numVertices; i++) {
+        Vertice *vAdj = g->listaAdj[i].head;
+        while (vAdj) {
+            if (g->listaAdj[vAdj->indice].cor == g->listaAdj[i].cor)
+                return 0;
+            vAdj = vAdj->proximo;
+        }
+    }
+    return 1;
+}
+
 int main() {
+
+    #ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+    #endif
+
     Grafo* grafo = criaGrafo(N_VERTICES);
     srand(time(NULL));
     criaArestasRandom(grafo);
+
     printaGrafo(grafo, 0);
-
-    coloreBacktracking(grafo, N_CORES, 0);
+    
+    /*coloreBacktracking(grafo, N_CORES, 0);
     printaGrafo(grafo, 1);
+    printf("\nEstá corretamente colorido? %s\n", estaBemColorido(grafo) ? "sim" : "não");
+    
+    resetaCores(grafo);*/
 
-    resetaCores(grafo);
+    int numCores = coloreGuloso(grafo);
 
-    // coloreGuloso()
-    // printaGrafo(grafo, 1);
+    printf("-----------------------------------------\n");
+    printf("Backtracking: Grafo colorido com %d cores\n", numCores);
+    printf("-----------------------------------------\n");
+
+    printaGrafo(grafo, 1);
+    printf("\nEstá corretamente colorido? %s\n", estaBemColorido(grafo) ? "sim" : "não");
 
     return 0;
 }
