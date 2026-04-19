@@ -8,8 +8,6 @@
 #define MIN_VERTICES 5
 #define RANGE_ADD_VERTICES 15
 
-#define N_CORES 3
-
 typedef struct Vertice {
     int indice;
     struct Vertice* proximo;
@@ -30,6 +28,7 @@ void printaGrafo(Grafo* grafo, int printaCor);
 void resetaCores(Grafo* grafo);
 
 // Algoritmo de coloração sobre o grafo
+int coloreBacktracking(Grafo* grafo);
 int coloreGuloso(Grafo *grafo);
 
 // Verificações sobre o grafo

@@ -2,10 +2,6 @@
 #include <stdlib.h>
 #include "arquivo.h"
 
-#define NOME_ARQUIVO "grafo_25nos.csv"
-#define QTD_VERTICES 25
-#define BUFFER_LEITURA 2*QTD_VERTICES
-
 Grafo* lerArquivo() {
 
     Grafo *g = criaGrafo(QTD_VERTICES);
@@ -23,9 +19,7 @@ Grafo* lerArquivo() {
     linha[BUFFER_LEITURA] = '\0';
 
     int v = 0;
-    while (!feof(file)) {
-
-        fgets(linha, BUFFER_LEITURA+1, file);
+    while (v < QTD_VERTICES && fgets(linha, BUFFER_LEITURA + 1, file) != NULL) {
 
         int vAdj = 0;
         while (vAdj < QTD_VERTICES) {

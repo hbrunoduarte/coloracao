@@ -9,6 +9,7 @@ void resetaCores(Grafo* grafo) {
     for(int i = 0; i < grafo->numVertices; i++) {
         grafo->listaAdj[i].cor = 0;
     }
+    grafo->verticesColoridos = 0;
 }
 
 int temVerticeSemCor(Grafo *g) {
@@ -27,32 +28,37 @@ int ehSeguro(Grafo* grafo, int v, int corTestada) {
     return 1;
 }
 
-int coloreBacktracking(Grafo* grafo, int qtdCores, int verticeAtual) {
-    if(verticeAtual == grafo->numVertices) {
-        printf("------------------------------------------------------\n");
-        printf("Backtracking: Grafo colorido com %d cores com sucesso!\n", qtdCores);
-        printf("------------------------------------------------------\n");
+int coloreBacktrackingAux(Grafo* grafo, int verticeAtual, int qtdCores) {
+    if(!temVerticeSemCor(grafo)) {
         return 1;
     }
 
-
     for(int c = 1; c <= qtdCores; c++) {
-
         if(ehSeguro(grafo, verticeAtual, c)) {
             grafo->listaAdj[verticeAtual].cor = c;
+            grafo->verticesColoridos++;
 
-            if(coloreBacktracking(grafo, qtdCores, verticeAtual+1) == 1) {
+            if(coloreBacktrackingAux(grafo, verticeAtual+1, qtdCores)) {
                 return 1;
+            } else {
+                grafo->listaAdj[verticeAtual].cor = 0;
+                grafo->verticesColoridos--;
             }
-
-            grafo->listaAdj[verticeAtual].cor = 0;
         }
     }
 
-    printf("------------------------------------------------------\n");
-    printf("Backtracking: Não foi possível colorir o grafo com %d cores.\n", qtdCores);
-    printf("------------------------------------------------------\n");
     return 0;
+}
+
+int coloreBacktracking(Grafo* grafo) {
+    for(int m = 1; m <= grafo->numVertices; m++) {
+        resetaCores(grafo);
+
+        if(coloreBacktrackingAux(grafo, 0, m)) {
+            return m;
+        }
+    }
+    return grafo->numVertices;
 }
 
 void coloreGulosoAuxiliar(Grafo *grafo, int verticeAtual, int *numCores) {
@@ -61,8 +67,6 @@ void coloreGulosoAuxiliar(Grafo *grafo, int verticeAtual, int *numCores) {
     while (qtdCoresInseguras != *numCores && !ehSeguro(grafo, verticeAtual, *numCores-qtdCoresInseguras))
         qtdCoresInseguras++;
     
-    //printf("verticeAtual = %i, numCores = %i, qtdCoresInseguras = %i\n", verticeAtual, *numCores, qtdCoresInseguras);
-
     if (qtdCoresInseguras == *numCores) {
         (*numCores)++;
         grafo->listaAdj[verticeAtual].cor = *numCores;
@@ -88,7 +92,6 @@ int coloreGuloso(Grafo *grafo) {
         if (grafo->listaAdj[i].cor == 0)
             coloreGulosoAuxiliar(grafo, i, &numCores);
     
-    grafo->verticesColoridos = 0;
     return numCores;
 }
 
@@ -114,8 +117,8 @@ void printaGrafo(Grafo* grafo, int printaCor) {
     }
 }
 
-// fisher-yates (auxiliar de criaArestasRandom)
-// não há auto-relacionamento nem vértices sem adjacencias
+// Fisher-Yates (auxiliar de criaArestasRandom)
+// Não há auto-relacionamento nem vértices sem adjacencias
 Vertice* escolheVizinhos(Grafo* grafo, int i, int qtdAleat) {
     if (qtdAleat == 0) return NULL; 
 
@@ -159,7 +162,7 @@ void criaArestasRandom(Grafo* grafo) {
         grafo->listaAdj[i].head = escolheVizinhos(grafo, i, qtdAleat);
     }
 
-    // garantir a simetria do grafo
+    // Garantir a simetria do grafo
     for (int i = 0; i < grafo->numVertices; i++) {
 
         Vertice *vAdj_i = grafo->listaAdj[i].head;
@@ -229,7 +232,7 @@ void freeGrafo(Grafo *g) {
     g->verticesColoridos = 0;
 }
 
-int main(int argc, char *argv) {
+int main(int argc, char *argv[]) {
     
     srand(time(NULL));
 
@@ -239,7 +242,7 @@ int main(int argc, char *argv) {
 
     Grafo *grafo;
 
-    if (argc == 2 && argv[1] == '1') {
+    if (argc == 2 && argv[1][0] == '1') {
         grafo = lerArquivo();
     } else {
         grafo = criaGrafo(MIN_VERTICES + (rand() % (RANGE_ADD_VERTICES + 1)));
@@ -247,14 +250,26 @@ int main(int argc, char *argv) {
     }
 
     printaGrafo(grafo, 0);
-    
-    /*coloreBacktracking(grafo, N_CORES, 0);
+    int numCores;
+
+    //////////////////////////////////
+
+    numCores = coloreBacktracking(grafo);
+
+    printf("\n-----------------------------------\n");
+    printf("Backtracking: Grafo colorido com %d cores\n", numCores);
+    printf("-----------------------------------\n\n");
+
     printaGrafo(grafo, 1);
     printf("\nEstá corretamente colorido? %s\n", estaBemColorido(grafo) ? "sim" : "não");
     
-    resetaCores(grafo);*/
+    //////////////////////////////////
 
-    int numCores = coloreGuloso(grafo);
+    resetaCores(grafo);
+
+    //////////////////////////////////
+
+    numCores = coloreGuloso(grafo);
 
     printf("\n-----------------------------------\n");
     printf("Guloso: Grafo colorido com %d cores\n", numCores);
@@ -262,6 +277,8 @@ int main(int argc, char *argv) {
 
     printaGrafo(grafo, 1);
     printf("\nEstá corretamente colorido? %s\n", estaBemColorido(grafo) ? "sim" : "não");
+
+    //////////////////////////////////
 
     freeGrafo(grafo);
 
