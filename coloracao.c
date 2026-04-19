@@ -2,30 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
-#define N_VERTICES 5
-#define N_CORES 3
-
-typedef struct Vertice {
-    int indice;
-    struct Vertice* proximo;
-} Vertice;
-
-typedef struct Adjacencias {
-    int cor;
-    Vertice* head;
-} Adjacencias;
-
-typedef struct Grafo {
-    int numVertices;
-    int verticesColoridos;
-    Adjacencias* listaAdj;
-} Grafo;
-
-void printaGrafo(Grafo* grafo, int printaCor);
+#include "coloracao.h"
 
 void resetaCores(Grafo* grafo) {
     for(int i = 0; i < grafo->numVertices; i++) {
@@ -35,16 +12,6 @@ void resetaCores(Grafo* grafo) {
 
 int temVerticeSemCor(Grafo *g) {
     return g->verticesColoridos != g->numVertices;
-}
-
-int todosVizinhosColoridos(Grafo *g, Vertice *v) {
-    Vertice *aux = v;
-    while (aux != NULL) {
-        if (g->listaAdj[v->indice].cor == 0)
-            return 0;
-        aux = aux->proximo;
-    }
-    return 1;
 }
 
 int ehSeguro(Grafo* grafo, int v, int corTestada) {
@@ -242,6 +209,23 @@ int estaBemColorido(Grafo *g) {
     return 1;
 }
 
+void freeGrafo(Grafo *g) {
+
+    if (!g || g->numVertices == 0 || !g->listaAdj) return;
+
+    for (int i = 0; i < g->numVertices; i++) {
+        Vertice *vAdj = g->listaAdj[i].head;
+        while (vAdj) {
+            Vertice *aux = vAdj;
+            vAdj = vAdj->proximo;
+            free(aux);
+        }
+    }
+    free(g->listaAdj);
+    g->numVertices = 0;
+    g->verticesColoridos = 0;
+}
+
 int main() {
 
     #ifdef _WIN32
@@ -262,12 +246,14 @@ int main() {
 
     int numCores = coloreGuloso(grafo);
 
-    printf("-----------------------------------------\n");
-    printf("Backtracking: Grafo colorido com %d cores\n", numCores);
-    printf("-----------------------------------------\n");
+    printf("\n-----------------------------------\n");
+    printf("Guloso: Grafo colorido com %d cores\n", numCores);
+    printf("-----------------------------------\n\n");
 
     printaGrafo(grafo, 1);
     printf("\nEstá corretamente colorido? %s\n", estaBemColorido(grafo) ? "sim" : "não");
+
+    freeGrafo(grafo);
 
     return 0;
 }
