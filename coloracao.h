@@ -5,7 +5,9 @@
 #include <windows.h>
 #endif
 
-#define N_VERTICES 5
+#define MIN_VERTICES 5
+#define RANGE_ADD_VERTICES 15
+
 #define N_CORES 3
 
 typedef struct Vertice {

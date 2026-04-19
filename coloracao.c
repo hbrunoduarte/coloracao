@@ -3,6 +3,7 @@
 #include <time.h>
 
 #include "coloracao.h"
+#include "arquivo.h"
 
 void resetaCores(Grafo* grafo) {
     for(int i = 0; i < grafo->numVertices; i++) {
@@ -201,8 +202,10 @@ int estaBemColorido(Grafo *g) {
     for (int i = 0; i < g->numVertices; i++) {
         Vertice *vAdj = g->listaAdj[i].head;
         while (vAdj) {
-            if (g->listaAdj[vAdj->indice].cor == g->listaAdj[i].cor)
+            if (g->listaAdj[vAdj->indice].cor == g->listaAdj[i].cor) {
+                printf("\n[%i -> %i]\n", i, vAdj->indice);
                 return 0;
+            }
             vAdj = vAdj->proximo;
         }
     }
@@ -226,15 +229,22 @@ void freeGrafo(Grafo *g) {
     g->verticesColoridos = 0;
 }
 
-int main() {
+int main(int argc, char *argv) {
+    
+    srand(time(NULL));
 
     #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
     #endif
 
-    Grafo* grafo = criaGrafo(N_VERTICES);
-    srand(time(NULL));
-    criaArestasRandom(grafo);
+    Grafo *grafo;
+
+    if (argc == 2 && argv[1] == '1') {
+        grafo = lerArquivo();
+    } else {
+        grafo = criaGrafo(MIN_VERTICES + (rand() % (RANGE_ADD_VERTICES + 1)));
+        criaArestasRandom(grafo);
+    }
 
     printaGrafo(grafo, 0);
     
