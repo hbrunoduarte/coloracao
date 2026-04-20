@@ -61,17 +61,27 @@ int coloreBacktracking(Grafo* grafo) {
     return grafo->numVertices;
 }
 
-void coloreGulosoAuxiliar(Grafo *grafo, int verticeAtual, int *numCores) {
+void coloreGulosoAuxiliar(Grafo *grafo, int verticeAtual, int *paletaCores) {
 
-    int qtdCoresInseguras = 0;
-    while (qtdCoresInseguras != *numCores && !ehSeguro(grafo, verticeAtual, *numCores-qtdCoresInseguras))
-        qtdCoresInseguras++;
-    
-    if (qtdCoresInseguras == *numCores) {
-        (*numCores)++;
-        grafo->listaAdj[verticeAtual].cor = *numCores;
-    } else {
-        grafo->listaAdj[verticeAtual].cor = *numCores-qtdCoresInseguras;
+    Vertice *vAdj = grafo->listaAdj[verticeAtual].head;
+    while (vAdj) {
+        int corVizinho = grafo->listaAdj[vAdj->indice].cor;
+        if (corVizinho != 0) paletaCores[corVizinho-1] = 0;
+        vAdj = vAdj->proximo;
+    }
+
+    int corEscolhida = 1;
+    for (; corEscolhida < grafo->numVertices; corEscolhida++)
+        if (paletaCores[corEscolhida-1])
+            break;
+
+    grafo->listaAdj[verticeAtual].cor = corEscolhida;
+
+    vAdj = grafo->listaAdj[verticeAtual].head;
+    while (vAdj) {
+        int corVizinho = grafo->listaAdj[vAdj->indice].cor;
+        if (corVizinho != 0) paletaCores[corVizinho-1] = 1;
+        vAdj = vAdj->proximo;
     }
 
     grafo->verticesColoridos++;
@@ -79,19 +89,30 @@ void coloreGulosoAuxiliar(Grafo *grafo, int verticeAtual, int *numCores) {
     Vertice *proxVertice = grafo->listaAdj[verticeAtual].head;
     while (temVerticeSemCor(grafo) && proxVertice != NULL) {
         if (grafo->listaAdj[proxVertice->indice].cor == 0)
-            coloreGulosoAuxiliar(grafo, proxVertice->indice, numCores);
+            coloreGulosoAuxiliar(grafo, proxVertice->indice, paletaCores);
         proxVertice = proxVertice->proximo;
     }
 }
 
 int coloreGuloso(Grafo *grafo) {
 
-    int numCores = 1;
+    int *paletaCores = malloc(sizeof(int) * grafo->numVertices);
+    for (int i = 0; i < grafo->numVertices; i++)
+        paletaCores[i] = 1;
 
     for (int i = 0; i < grafo->numVertices && temVerticeSemCor(grafo); i++)
         if (grafo->listaAdj[i].cor == 0)
-            coloreGulosoAuxiliar(grafo, i, &numCores);
+            coloreGulosoAuxiliar(grafo, i, paletaCores);
     
+    int numCores = 0;
+
+    for (int i = 0; i < grafo->numVertices && numCores < grafo->numVertices; i++) {
+        if (paletaCores[grafo->listaAdj[i].cor-1]) {
+            numCores++;
+            paletaCores[grafo->listaAdj[i].cor-1] = 0;
+        }
+    }
+
     return numCores;
 }
 
@@ -254,7 +275,7 @@ int main(int argc, char *argv[]) {
 
     //////////////////////////////////
 
-    numCores = coloreBacktracking(grafo);
+    /*numCores = coloreBacktracking(grafo);
 
     printf("\n-----------------------------------\n");
     printf("Backtracking: Grafo colorido com %d cores\n", numCores);
@@ -265,7 +286,7 @@ int main(int argc, char *argv[]) {
     
     //////////////////////////////////
 
-    resetaCores(grafo);
+    resetaCores(grafo);*/
 
     //////////////////////////////////
 
