@@ -1,0 +1,203 @@
+\documentclass{article}
+
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\usepackage{listings}   % Para inserir blocos de código
+\usepackage{changepage} % Para usar o ambiente adjustwidth
+
+% (Opcional) Configurações básicas para deixar o código C mais bonito
+\usepackage{xcolor} % Necessário se quiser adicionar cores ao código
+\lstset{
+	tabsize=4,
+	basicstyle=\ttfamily\small,
+	keywordstyle=\color{blue},
+	stringstyle=\color{red},
+	commentstyle=\color{green!60!black},
+	showstringspaces=false,
+	breaklines=true
+}
+
+\title{Coloração de Grafos}
+\author{Bruno Henrique Duarte\\João Víctor Paiva Nunes Pereira}
+\date{Abril 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{O Problema de Coloração de Grafos}
+
+Grafos são estruturas matemáticas compostas por um conjunto de vértices $V$ e um conjunto de arestas $E$, geralmente denotados por $G=(V,E)$. Na Ciência da Computação (CC), problemas que podem ser abordados através de grafos abundam. Dentre esses problemas, a coloração de grafos merece destaque.
+
+Uma $\lambda$-coloração de um grafo $G=(V,E)$ é uma função $f: V\rightarrow \{1,2,\dots,\lambda\}$ que mapeia cada vértice a uma cor (aqui representada por um número de 1 a $\lambda$). Uma coloração correta de um grafo é tal que para todo $x,y\in V$ tais que $y\in\Gamma(x)$ temos que $f(x)\not=f(y)$, onde $\Gamma: V\rightarrow 2^V$ retorna os vértices adjacentes - vizinhos - a um vértice dado.
+
+Dada essa definição, dizemos que o número cromático de um grafo, denotado por $\chi(G)$, é a menor quantidade de cores necessária para colorir um grafo. Descobrir $\chi(G)$ é o problema de coloração de grafos.
+
+\subsection{Problemas Equivalentes}
+
+Diversos problemas práticos são equivalente ao problema de coloração de grafos, alguns deles:
+
+\begin{enumerate}
+	\item \textit{Resolução de um jogo de Sudoku} (Herzberg; Murty, 2006);
+	
+	\item \textit{Alocação de registradores em compiladores} (Aho \textit{et al.}, 2007, p. 353);
+	
+	\item \textit{Escalonamento}. Clássico problema geralmente associado à alocação de turmas, professores e alunos.
+\end{enumerate}
+
+Esses três problemas demonstram como o problema de coloração é um problema relevante na CC. Agora, vamos analisar os algoritmos que tentam resolver esse problema. Nesse sentido, é importante destacar que representamos grafos como lista de adjacências.
+
+\section{Coloração via Backtracking}
+
+Vamos iniciar pelo algoritmo força bruta para resolver o problema.
+
+\vspace{0.5em}
+\begin{adjustwidth}{2.5em}{}
+\begin{lstlisting}[language=C]
+int coloreBacktrackingAux(Grafo* grafo, int verticeAtual, int qtdCores) {
+	if(!temVerticeSemCor(grafo)) {
+		return 1;
+	}
+	
+	for(int c = 1; c <= qtdCores; c++) {
+		if(ehSeguro(grafo, verticeAtual, c)) {
+			grafo->listaAdj[verticeAtual].cor = c;
+			grafo->verticesColoridos++;
+			
+			if(coloreBacktrackingAux(grafo, verticeAtual+1, qtdCores)) {
+				return 1;
+			} else {
+				grafo->listaAdj[verticeAtual].cor = 0;
+				grafo->verticesColoridos--;
+			}
+		}
+	}
+	
+	return 0;
+}
+
+int coloreBacktracking(Grafo* grafo) {
+	for(int m = 1; m <= grafo->numVertices; m++) {
+		resetaCores(grafo);
+		
+		if(coloreBacktrackingAux(grafo, 0, m)) {
+			return m;
+		}
+	}
+	return grafo->numVertices;
+}
+\end{lstlisting}
+\end{adjustwidth}
+\vspace{0.5em}
+
+A função que é chamada inicialmente é a \texttt{coloreBacktracking}. Nesta função, há um laço que tenta colorir o grafo com uma quantidade de cores $m$, onde $1\le m\le|V|$. Para cada valor de $m$, o laço chama a função auxiliar \texttt{coloreBacktrackingAux}, que é a função que de fato tenta colorir o grafo com a quantidade de cores dada e com o vértice inicial passado como argumento (sempre o vértice 0).
+
+Na função \texttt{coloreBacktrackingAux}, é realizado um laço sobre as cores. Se o vértice atual puder ser colorido com a cor (verificação feita pela função \texttt{ehSeguro}), colore-se ele e chama-se recursivamente a função para o vértice de índice seguinte. Quando a recursão acabar, caso seja retornado 1, significa que é possível colorir o grafo com a quantidade de cores dada; caso seja retornado 0, significa que não foi possível colorir algum vértice com nenhuma das cores disponíveis.
+
+A complexidade de espaço da função \texttt{coloreGuloso} é $O(V)$, enquanto a complexidade de tempo é $O(V^V)$. Para enxergar a complexidade de espaço, basta verificar que a recursão de \texttt{coloreBacktrackingAux} sempre para ao ser chamada pela $V+1$ vez e retorna até a chamada inicial realizada na função \texttt{coloreGuloso}.
+
+Quanto à complexidade de tempo, temos que olhar para o laço principal de \texttt{coloreBacktrackingAux}. Seja $m$ a quantidade de cores, o laço sempre executa $m$ vezes e chama a função \texttt{ehSeguro}, a qual tem complexidade $O(E)$, mas que para um grafo denso pode ser $O(V)$. Caso seja seguro colorir o vértice, a função realiza a recursão. Neste ponto é onde a árvore de execução se ramifica e conclui-se que a complexidade de tempo da função \texttt{coloreBacktrackingAux} é $O(V\cdot m^V)$. Voltando à função \texttt{coloreBacktracking}, o laço executa \texttt{resetaCores}, que tem complexidade de tempo $O(V)$, e a função auxiliar. Logo, a complexidade é dada por:
+
+\[\sum_{m=1}^{V} [O(V) + O(V\cdot m^V)] = O(V^V).\]
+
+Evidentemente, essa é uma complexidade muito ruim. Isso se deve ao fato de que a coloração de grafos é um problema NP-difícil, ou seja, não se conhece algoritmo em tempo polinomial que resolva otimamente esse problema.
+
+\section{Coloração via Técnica Gulosa}
+
+Diante do fato do problema ser NP-difícil, procuram-se outras estratégias para realizar a coloração que sejam muito mais eficientes. Em troca, essas abordagens não encontram a soluçam ótima. O algoritmo a seguir utiliza uma técnica gulosa para colorir o grafo.
+
+\vspace{0.5em}
+\begin{adjustwidth}{}{}
+\begin{lstlisting}[language=C]
+void coloreGulosoAuxiliar(Grafo *grafo, int verticeAtual, int *paletaCores) {
+	
+	Vertice *vAdj = grafo->listaAdj[verticeAtual].head;
+	while (vAdj) {
+		int corVizinho = grafo->listaAdj[vAdj->indice].cor;
+		if (corVizinho != 0) paletaCores[corVizinho-1] = 0;
+		vAdj = vAdj->proximo;
+	}
+	
+	int corEscolhida = 1;
+	for (; corEscolhida < grafo->numVertices; corEscolhida++)
+	if (paletaCores[corEscolhida-1]) break;
+	
+	grafo->listaAdj[verticeAtual].cor = corEscolhida;
+	
+	vAdj = grafo->listaAdj[verticeAtual].head;
+	while (vAdj) {
+		int corVizinho = grafo->listaAdj[vAdj->indice].cor;
+		if (corVizinho != 0) paletaCores[corVizinho-1] = 1;
+		vAdj = vAdj->proximo;
+	}
+	
+	grafo->verticesColoridos++;
+	
+	Vertice *proxVertice = grafo->listaAdj[verticeAtual].head;
+	while (temVerticeSemCor(grafo) && proxVertice != NULL) {
+		if (grafo->listaAdj[proxVertice->indice].cor == 0)
+		coloreGulosoAuxiliar(grafo, proxVertice->indice, paletaCores);
+		proxVertice = proxVertice->proximo;
+	}
+}
+
+int coloreGuloso(Grafo *grafo) {
+	
+	int *paletaCores = malloc(sizeof(int) * grafo->numVertices);
+	for (int i = 0; i < grafo->numVertices; i++)
+	paletaCores[i] = 1;
+	
+	for (int i = 0; i < grafo->numVertices && temVerticeSemCor(grafo); i++)
+		if (grafo->listaAdj[i].cor == 0)
+			coloreGulosoAuxiliar(grafo, i, paletaCores);
+	
+	int numCores = 0;
+	
+	for (int i = 0; i < grafo->numVertices && numCores < grafo->numVertices; i++) {
+		if (paletaCores[grafo->listaAdj[i].cor-1]) {
+			numCores++;
+			paletaCores[grafo->listaAdj[i].cor-1] = 0;
+		}
+	}
+	
+	return numCores;
+}
+\end{lstlisting}
+\end{adjustwidth}
+\vspace{0.5em}
+
+Inicialmente, chama-se o procedimento \texttt{coloreGuloso}, o qual cria um vetor de inteiros de tamanho $V$. Esse vetor, na verdade, opera como um vetor booleano, em que cada posição indica se uma cor pode ser utilizada para pintar o vértice ou não. Nesse procedimento, inicializa-se o vetor com 1s. Na sequência, o procedimento chama a função auxiliar \texttt{coloreGulosoAuxiliar}, passando como argumento o vértice inicial para começar a coloração e o vetor booleano.
+
+Na função \texttt{coloreGulosoAuxiliar}, primeiro varre-se as adjacências do vértice atual e marca-se com 0 a posição das cores utilizadas nos seus vizinhos. A seguir, encontra-se a primeira cor não marcada para colorir o vértice atual. Então, reseta-se o vetor booleano e chama-se a função recursivamente para algum vértice vizinho ainda não colorido. Caso não haja tal vértice, a função retorna para a função principal.
+
+Evidentemente, a complexidade de espaço dessa abordagem gulosa é $O(V)$, para o vetor booleano. Já a complexidade de tempo é $O(V+E)$, pois a complexidade de \texttt{coloreGulosoAuxiliar} é $O(V+E)$ e essa função só é chamada enquanto houver vértices que não foram coloridos.
+
+A técnica gulosa é empregada no procedimento \texttt{coloreGulosoAuxiliar}, onde procura-se tentar colorir primeiro os vértices vizinhos. Eventualmente, todos os vértices terão sido coloridos. O único problema é que isso não garante que encontraremos o número cromático do grafo. Todavia, para a maioria dos problemas uma aproximação boa é o suficiente.
+
+\section{Resultados}
+
+Como esperado, o algoritmo que utiliza backtracking levou mais de 5 minutos para encontrar o número cromático do grafo dado pelo professor. O número cromático encontrado foi 8. Para grafos pequenos, o backtracking pode até ser uma abordagem viável, porém continuará sendo muito lento.
+
+Por outro lado, o algoritmo guloso executou extremamente rápido. Diante disso, foi possível realizar diversas execuções com vértices iniciais diferentes para analisar se a quantidade de cores utilizadas para colorir o grafo mudaria.
+
+Dessas execuções, obtemos:
+
+\begin{itemize}
+	\item Para 5 vértices iniciais o grafo foi colorido com 10 cores;
+	\item Para 18 vértices iniciais o grafo foi colorido com 9 cores;
+	\item Para 2 vértices iniciais o grafo foi colorido com 8 cores, a solução ótima.
+\end{itemize}
+
+Desse modo, podemos concluir que a maioria das execuções retornou um número muito próximo à solução ótima, que o vértice inicial de coloração interfere diretamente na quantidade de cores que serão utilizadas e que o algoritmo guloso é uma excelente aproximação - e às vezes uma solução - para o problema de coloração de grafos.
+
+\section{Referências}
+
+AHO, A. V.; LAM, M. S.; SETHI, R.; ULLMAN, J. D. Compilers: principles, techniques, and tools. 2. ed. Boston: Pearson Addison-Wesley, 2006.
+
+\noindent HERZBERG, A. M.; MURTY, M. R. Sudoku squares and chromatic polynomials. Notices of the American Mathematical Society, Providence, v. 54, n. 6, p. 708-717, jun. 2007.
+
+\end{document}
